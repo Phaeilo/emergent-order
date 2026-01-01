@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Cube Demo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Top bar with global controls and status -->
+        <div class="top-bar">
+            <div class="playback-controls">
+                <button id="runButton" class="btn btn-success play-btn" title="Run Animation (Ctrl+Enter)">▶</button>
+                <button id="stopButton" class="btn btn-danger stop-btn" title="Stop Animation (Ctrl+.)">■</button>
+            </div>
+            <div class="wled-controls">
+                <input type="text" id="wledHost" class="form-control wled-input" placeholder="WLED IP (e.g., 192.168.1.100)" title="Enter WLED device IP address">
+                <select id="wledProtocol" class="form-control wled-protocol" title="Select WebSocket protocol">
+                    <option value="wled">WLED JSON</option>
+                    <option value="binary">Binary</option>
+                </select>
+                <select id="wledFps" class="form-control wled-fps" title="WebSocket frame rate">
+                    <option value="20">20 FPS</option>
+                    <option value="30">30 FPS</option>
+                    <option value="40">40 FPS</option>
+                    <option value="60" selected>60 FPS</option>
+                    <option value="120">120 FPS</option>
+                </select>
+                <button id="wledConnect" class="btn btn-primary btn-small wled-btn" title="Connect to WLED">Connect</button>
+                <div class="wled-status" id="wledStatus">Disconnected</div>
+            </div>
+            <div class="status" id="statusContainer">
+                <div id="statusMessage">Ready</div>
+            </div>
+        </div>
+        
+        <!-- Main viewport area -->
+        <div class="viewport-section">
+            <div class="canvas-container">
+                <canvas id="canvas" width="800" height="600"></canvas>
+                <button id="resetCamera" class="btn btn-icon reset-camera-btn" title="Reset Camera">⌂</button>
+            </div>
+            
+            <!-- Collapsible viewport controls -->
+            <div class="collapsible-section">
+                <div class="section-header" id="viewportControlsHeader">
+                    <span>Viewport Controls</span>
+                    <span class="toggle-arrow">▼</span>
+                </div>
+                <div class="section-content" id="viewportControlsContent">
+                    <div class="controls">
+                        <div class="control-group">
+                            <label for="distributionMode">Distribution:</label>
+                        <select id="distributionMode" class="form-control">
+                            <option value="grid">Grid</option>
+                            <option value="random">Random</option>
+                            <option value="import">Import Points</option>
+                        </select>
+                        </div>
+                        <div class="control-group import-points-group" id="importPointsGroup">
+                            <button id="importPointsBtn" class="btn btn-primary import-btn">Import Coordinates</button>
+                            <span id="importedPointsCount">0 points imported</span>
+                        </div>
+                        <div class="control-group cube-orientation-control">
+                            <label for="cubeOrientation">Orientation:</label>
+                            <select id="cubeOrientation" class="form-control">
+                                <option value="normal">Normal</option>
+                                <option value="tipped">Tipped on Vertex</option>
+                            </select>
+                        </div>
+                        <div class="slider-control cube-size-control">
+                            <label for="cubeSize" id="cubeSizeLabel">Cube Size:</label>
+                            <div class="slider-input-group">
+                                <input type="range" id="cubeSize" class="slider" min="4" max="32" value="8" step="1">
+                                <input type="number" id="cubeSizeValue" class="form-control input-narrow" min="4" max="32" value="8" step="1">
+                            </div>
+                        </div>
+                        <div class="slider-control">
+                            <label for="sphereSize">Sphere Size:</label>
+                            <div class="slider-input-group">
+                                <input type="range" id="sphereSize" class="slider" min="0.5" max="5.0" value="1.7" step="0.1">
+                                <input type="number" id="sphereSizeValue" class="form-control input-narrow" min="0.5" max="5.0" value="1.7" step="0.1">
+                            </div>
+                        </div>
+                        <div class="slider-control">
+                            <label for="spinSpeed">Spin Speed:</label>
+                            <div class="slider-input-group">
+                                <input type="range" id="spinSpeed" class="slider" min="-1" max="1" value="0" step="0.1">
+                                <input type="number" id="spinSpeedValue" class="form-control input-narrow" min="-1" max="1" value="0" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Collapsible parameters section -->
+        <div class="collapsible-section" id="parametersSection" style="display: none;">
+            <div class="section-header" id="parametersHeader">
+                <h3>Parameters</h3>
+                <span class="toggle-arrow">▲</span>
+            </div>
+            <div class="section-content expanded" id="parametersContent">
+                <!-- Presets controls -->
+                <div class="presets-controls">
+                    <div class="presets-row">
+                        <button id="savePresetBtn" class="btn btn-success btn-small preset-btn save-btn">💾 Save</button>
+                        <select id="presetSelector" class="form-control preset-selector">
+                            <option value="">Select a preset...</option>
+                        </select>
+                        <button id="loadPresetBtn" class="btn btn-primary btn-small preset-btn load-btn">📂 Load</button>
+                        <button id="deletePresetBtn" class="btn btn-danger btn-small preset-btn delete-btn">🗑️ Delete</button>
+                    </div>
+                    <div class="presets-info">
+                        <span id="presetCount" class="preset-count">No presets</span>
+                    </div>
+                </div>
+                
+                <div id="parametersContainer" class="parameters-content">
+                    <!-- Parameters will be dynamically generated here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Collapsible code section -->
+        <div class="collapsible-section">
+            <div class="section-header" id="codeEditorHeader">
+                <span>Code Editor</span>
+                <span class="toggle-arrow">▼</span>
+            </div>
+            <div class="section-content" id="codeEditorContent">
+                <div class="code-section">
+                    <textarea id="codeInput" spellcheck="false" placeholder="// Define your getSphereColor function
+function getSphereColor(x, y, z, t) {
+    // x, y, z are normalized coordinates (0.0 to 1.0)
+    // t is time in seconds since start
+    // Return [r, g, b] values (0.0 to 1.0)
+    
+    // Example: Wave pattern from center
+    const centerX = 0.5, centerY = 0.5, centerZ = 0.5;
+    const dx = x - centerX, dy = y - centerY, dz = z - centerZ;
+    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    
+    const wave = Math.sin(dist * 8 + t * 3) * 0.5 + 0.5;
+    const hue = (dist * 2 + t * 0.2) % 1.0;
+    
+    // Convert HSV to RGB
+    const c = wave;
+    const x_val = c * (1 - Math.abs((hue * 6) % 2 - 1));
+    const m = 0;
+    
+    let r, g, b;
+    if (hue < 1/6) { r = c; g = x_val; b = 0; }
+    else if (hue < 2/6) { r = x_val; g = c; b = 0; }
+    else if (hue < 3/6) { r = 0; g = c; b = x_val; }
+    else if (hue < 4/6) { r = 0; g = x_val; b = c; }
+    else if (hue < 5/6) { r = x_val; g = 0; b = c; }
+    else { r = c; g = 0; b = x_val; }
+    
+    return [r + m, g + m, b + m];
+}"></textarea>
+                    
+                    <div class="code-controls">
+                        <button id="resetCodeBtn" class="btn btn-small parameter-reset" title="Reset to default template">🔄</button>
+                    </div>
+                    
+                    <div class="error-display" id="errorDisplay" style="display: none;">
+                        <div class="error-message" id="errorMessage"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
