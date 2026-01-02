@@ -1,0 +1,27 @@
+{
+  "name": "led-cube-showrunner",
+  "version": "1.0.0",
+  "description": "LED cube animation showrunner service - streams animations to 1186-LED art installation",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "LOG_LEVEL=debug node index.js"
+  },
+  "keywords": [
+    "led",
+    "ws2812",
+    "animation",
+    "art-installation"
+  ],
+  "author": "Philip Huppert",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "serialport": "^12.0.0",
+    "chokidar": "^3.5.3",
+    "ws": "^8.16.0"
+  }
+}

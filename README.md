@@ -26,7 +26,7 @@ This repository contains the following subdirectories:
 
 ### Software & Control
 
-- **`showrunner/`** - Node.js service that runs on the Raspberry Pi, manages animation playback, streams LED data to the Pico firmware via USB serial, and provides WebSocket interface.
+- **`showrunner/`** - Node.js service that plays LED animations on the cube, streaming frames at 30-60 FPS over serial to the Pico firmware. Supports hot-swappable animations and WebSocket interface for live streaming. See [showrunner/README.md](showrunner/README.md) for details.
 
 - **`animations/`** - JavaScript animation scripts that generate LED patterns using 3D math (SDF primitives, planes, spheres, fire effects, etc.). See [animations/README.md](animations/README.md) for examples and animation format.
 
