@@ -38,7 +38,7 @@ This repository contains the following subdirectories:
 
 - **`ws2serial/`** - Python utility for testing and interfacing with WS2812 LED strips over USB serial during development. Provides a WebSocket-to-serial adapter allowing the animation designer web tool to stream pixel data over the network to the Pico controller.
 
-- **`testdevice/`** - MicroPython code for ESP32-C3 to quickly test single LED strings during installation and teardown.
+- **`testdevice/`** - MicroPython code for ESP32-C3 to quickly test single LED strings during installation and teardown. See [testdevice/README.md](testdevice/README.md) for details.
 
 ### Prototypes
 
