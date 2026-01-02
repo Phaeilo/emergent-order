@@ -20,7 +20,7 @@ This repository contains the following subdirectories:
 
 - **`controller_pcb/`** - KiCad project for the custom controller PCB that interfaces the Raspberry Pi 4 with the Raspberry Pi Pico and provides power distribution for the LED strings.
 
-- **`pico_firmware/`** - C firmware for the Raspberry Pi Pico that receives LED data over USB serial and outputs WS2812B protocol data using PIO state machines.
+- **`pico_firmware/`** - C firmware for the Raspberry Pi Pico that drives 8 independent WS2812B channels via PIO hardware. Features gamma correction, automatic current limiting, hardware monitoring (temperature, current, voltage), channel fault detection, and built-in test patterns. Supports up to 200 LEDs per channel at 60Hz. See [pico_firmware/README.md](pico_firmware/README.md) for protocol specification and development setup.
 
 - **`mechanical/`** - 3D printable parts (base, corners, combs, controller mounts) and carbon fiber tube specifications for building the physical cube structure. See [mechanical/README.md](mechanical/README.md) for details.
 

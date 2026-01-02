@@ -1,0 +1,41 @@
+# PICO_PIN  PCB_PIN     (comment)
+
+# WS2812 outputs
+GPIO_8  CTRL_0  (WS2812 string 0)
+GPIO_9  CTRL_1  (WS2812 string 1)
+GPIO_10 CTRL_2  (WS2812 string 2)
+GPIO_11 CTRL_3  (WS2812 string 3)
+GPIO_12 CTRL_4  (WS2812 string 4)
+GPIO_13 CTRL_5  (WS2812 string 5)
+GPIO_14 CTRL_6  (WS2812 string 6)
+GPIO_15 CTRL_7  (WS2812 string 7)
+
+# user interface
+GPIO_2  LED_0   (primary onboard status LED)
+GPIO_3  LED_1   (secondary onboard status LED)
+GPIO_6  BTN_0   (primary button, external pull-up, low if pushed)
+GPIO_7  BTN_1   (secondary button, external pull-up, low if pushed)
+
+# thermal
+GPIO_26_ADC0    NTC_0   (primary thermal sensor)
+GPIO_27_ADC1    NTC_1   (secondary thermal sensor)
+INA226
+# voltage feedback
+GPIO_28_ADC2    FB_M    (output from feedback multiplexer)
+GPIO_20         FB_S0   (address S0 to feedback multiplexer)
+GPIO_21         FB_S1   (address S1 to feedback multiplexer)
+GPIO_22         FB_S2   (address S2 to feedback multiplexer)
+
+# SD Card slot
+GPIO_16     SD_DO
+GPIO_17     SD_CS
+GPIO_18     SD_CLK
+GPIO_19     SD_DI
+
+# I2C
+GPIO_4  SDA     (connected to INA226 for current sensing, bus also has header where user may attach display (SSH 1106))
+GPIO_5  SCL
+
+# UART
+GPIO_0  UART0_TX
+GPIO_1  UART0_RX
