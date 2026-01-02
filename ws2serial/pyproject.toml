@@ -1,0 +1,10 @@
+[project]
+name = "ws2serial"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp>=3.13.2",
+    "pyserial>=3.5",
+    "websockets>=15.0.1",
+]

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Serial Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px 0; font-size: 14px; }
+        #output {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 400px;
+            overflow-y: scroll;
+            background: #f5f5f5;
+            margin: 10px 0;
+        }
+        .message { margin: 2px 0; }
+        .received { color: blue; }
+        .sent { color: green; }
+        .error { color: red; }
+        .info { color: gray; }
+        input[type="text"] { width: 400px; padding: 5px; }
+        label { display: inline-block; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h2>WebSocket Serial Test</h2>
+
+    <div>
+        <input type="text" id="wsUrl" value="ws://localhost:8080/ws" placeholder="WebSocket URL">
+        <button id="connectBtn" onclick="toggleConnection()">Connect</button>
+    </div>
+
+    <div id="output"></div>
+
+    <div>
+        <label>
+            <input type="radio" name="inputType" value="text" checked> Text
+            <input type="radio" name="inputType" value="hex"> Hex
+        </label><br>
+        <input type="text" id="messageInput" placeholder="Enter message (text or hex like: 01 FF A3)" onkeypress="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        let ws = null;
+
+        function isPrintable(data) {
+            for (let i = 0; i < data.length; i++) {
+                let byte = data[i];
+                if (byte < 32 && byte !== 10 && byte !== 13 && byte !== 9) return false;
+                if (byte > 126) return false;
+            }
+            return true;
+        }
+
+        function bytesToHex(bytes) {
+            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
+        }
+
+        function addMessage(text, className) {
+            const output = document.getElementById('output');
+            const msg = document.createElement('div');
+            msg.className = 'message ' + className;
+            msg.textContent = text;
+            output.appendChild(msg);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function toggleConnection() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            } else {
+                connect();
+            }
+        }
+
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+            addMessage('Connecting to ' + url + '...', 'info');
+
+            ws = new WebSocket(url);
+            ws.binaryType = 'arraybuffer';
+
+            ws.onopen = function() {
+                addMessage('Connected', 'info');
+                document.getElementById('connectBtn').textContent = 'Disconnect';
+            };
+
+            ws.onclose = function() {
+                addMessage('Disconnected', 'info');
+                document.getElementById('connectBtn').textContent = 'Connect';
+                ws = null;
+            };
+
+            ws.onerror = function(error) {
+                addMessage('Error: ' + error, 'error');
+            };
+
+            ws.onmessage = function(event) {
+                const data = new Uint8Array(event.data);
+                let display;
+
+                if (isPrintable(data)) {
+                    display = 'RX: ' + new TextDecoder().decode(data);
+                } else {
+                    display = 'RX (hex): ' + bytesToHex(data);
+                }
+
+                addMessage(display, 'received');
+            };
+        }
+
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('Not connected', 'error');
+                return;
+            }
+
+            const input = document.getElementById('messageInput');
+            const message = input.value;
+            if (!message) return;
+
+            const inputType = document.querySelector('input[name="inputType"]:checked').value;
+
+            try {
+                if (inputType === 'hex') {
+                    const hexValues = message.split(/\s+/).filter(s => s.length > 0);
+                    const bytes = new Uint8Array(hexValues.map(h => parseInt(h, 16)));
+                    ws.send(bytes);
+                    addMessage('TX (hex): ' + bytesToHex(bytes), 'sent');
+                } else {
+                    const bytes = new TextEncoder().encode(message);
+                    ws.send(bytes);
+                    addMessage('TX: ' + message, 'sent');
+                }
+                input.value = '';
+            } catch (e) {
+                addMessage('Error sending: ' + e.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

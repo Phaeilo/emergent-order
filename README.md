@@ -36,7 +36,7 @@ This repository contains the following subdirectories:
 
 - **`calibration/`** - Python tools and web interface for detecting and mapping the 3D coordinates of each LED in the physical cube using computer vision.
 
-- **`ws2serial/`** - Python utility for testing and interfacing with WS2812 LED strips over USB serial during development. Provides a WebSocket-to-serial adapter allowing the animation designer web tool to stream pixel data over the network to the Pico controller.
+- **`ws2serial/`** - Python utility for testing and interfacing with WS2812 LED strips over USB serial during development. Provides a WebSocket-to-serial adapter allowing the animation designer web tool to stream pixel data over the network to the Pico controller. See [ws2serial/README.md](ws2serial/README.md) for details.
 
 - **`testdevice/`** - MicroPython code for ESP32-C3 to quickly test single LED strings during installation and teardown. See [testdevice/README.md](testdevice/README.md) for details.
 
