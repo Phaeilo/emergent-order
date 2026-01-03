@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Philip Huppert. Licensed under the MIT License.
+
 // Logging helper
 function log(message, ...args) {
     console.log(`[LED Detector] ${message}`, ...args);

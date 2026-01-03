@@ -34,7 +34,7 @@ This repository contains the following subdirectories:
 
 ### Calibration & Utilities
 
-- **`calibration/`** - Python tools and web interface for detecting and mapping the 3D coordinates of each LED in the physical cube using computer vision.
+- **`calibration/`** - Tools for recovering 3D LED positions from video captures of the cube. Includes video frame extraction, LED detection with ternary color-coded identification, and multi-camera 3D triangulation with bundle adjustment. Features both Python CLI tools and a web-based detector with real-time visualization. See [calibration/README.md](calibration/README.md) for complete workflow and encoding scheme documentation.
 
 - **`ws2serial/`** - Python utility for testing and interfacing with WS2812 LED strips over USB serial during development. Provides a WebSocket-to-serial adapter allowing the animation designer web tool to stream pixel data over the network to the Pico controller. See [ws2serial/README.md](ws2serial/README.md) for details.
 
