@@ -28,6 +28,23 @@ Ordered from "CARBON TIME" store on AliExpress:
 
 **Finish:** Twill matte
 
+#### LED Strings
+
+**Product:** WS2812B addressable LED string ([AliExpress link](https://de.aliexpress.com/item/1005001915144430.html))
+
+**Specifications:**
+- 20m string with 10 LEDs per meter (200 LEDs total per string)
+- 6 strings required for the installation
+
+**Total LEDs:** 1200 LEDs (200 LEDs × 6 strings)
+
+**Important Notes:**
+- 20m strings are pushing the limit when only injecting power from one end
+- Software current limiting is required to avoid incorrect colors at the far end of the string
+- This is a trade-off between fewer string connections and power distribution challenges
+- Wire appearance: would look better if wire were painted black, but such a product doesn't exist off-the-shelf
+- Wire stretching: the wire will stretch during/after installation, and especially with temperature gradients in long-term installations. Consider a re-tensioning concept or better securing method for permanent installations
+
 #### MDF Base
 
 The base houses all electronics and provides structural support:
