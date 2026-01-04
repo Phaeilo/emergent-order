@@ -58,6 +58,14 @@ This repository contains the following subdirectories:
 
 Most of the code in this project was synthesized ("vibe coded") using various Anthropic Claude models. The goal was to rapidly prototype and get something working, so the code may not be well understood in all places or may contain bugs. However, key decisions about architecture, algorithms and artistic content were provided by humans, just not manually implemented line-by-line.
 
+## Related Works
+
+Others have explored similar concepts in volumetric LED displays and spatial calibration:
+
+- **Matt Parker's Christmas Tree (2020):** Matt Parker from the YouTube channel "Stand-up Maths" set up his Christmas tree with 500 LED lights in December 2020 and calculated their positions in 3D space. His well-made and educational video documenting the process: [I wired my tree with 500 LED lights and calculated their 3D coordinates.](https://www.youtube.com/watch?v=TvlpIojusBE)
+
+- **Birk Schmithuesen's SpeculativeAI Series (2019-2022):** Artist Birk Schmithuesen created a sphere installation filled with 160 meters of LED strips comprising 9600 pixels. Through calibration work by Felix Bonowski, volumetric content was rendered on this sphere. The project is extensively documented at [birkschmithuesen.com/_speculativeAI](https://www.birkschmithuesen.com/_speculativeAI)
+
 ## License
 
 See the license files in individual directories or license text in source files.
