@@ -7,13 +7,10 @@ import numpy as np
 from collections import deque
 
 # Configuration constants
-BRIGHTNESS_THRESHOLD_PERCENT = 0.06  # 25% threshold for edge detection
+BRIGHTNESS_THRESHOLD_PERCENT = 0.005  # 25% threshold for edge detection
 ROLLING_AVERAGE_FRAMES = 5  # Number of frames to use for rolling average
 SEQUENCE_LENGTH = 9  # Number of frames between magenta markers
-MAGENTA_THRESHOLD_MULTIPLIER = 1.20  # Magenta threshold as multiplier of average (1.5 = 50% above average)
-SUB_SEQUENCES = 1  # Number of sub-sequences to divide the main sequence into
-SKIP_FIRST_FRAME_IN_SEQUENCE = False
-RED_INSTEAD_OF_MAGENTA = False
+MAGENTA_THRESHOLD_MULTIPLIER = 1.1  # Magenta threshold as multiplier of average (1.5 = 50% above average)
 
 
 def calc_brightness(frame):
@@ -28,42 +25,21 @@ def calc_brightness(frame):
     return np.mean(gray)
 
 
-def calc_red(frame):
-    """Calculate how 'red' a frame is."""
-    # Ensure frame is in BGR format (OpenCV default)
-    if len(frame.shape) != 3:
-        return 0.0
-
-    # Split BGR channels
-    b, g, r = cv2.split(frame.astype(np.float32))
-
-    # Red = high red channel, low green and blue
-    # Calculate red score: red minus average of green and blue
-    red_score = np.mean(r - (g + b) / 2.0)
-
-    # Normalize to 0-255 range
-    return max(0.0, red_score)
-
-
 def calc_magenta(frame):
     """Calculate how 'magenta' a frame is."""
-
-    if RED_INSTEAD_OF_MAGENTA:
-        return calc_red(frame)
-
     # Ensure frame is in BGR format (OpenCV default)
     if len(frame.shape) != 3:
         return 0.0
-    
+
     # Convert BGR to RGB for easier understanding
     # In BGR: magenta is high Blue + high Red, low Green
     # We'll calculate magenta intensity as (B + R - G) / 2
     b, g, r = cv2.split(frame.astype(np.float32))
-    
+
     # Magenta = high red + high blue, low green
     # Calculate magenta score: average of (red + blue - green)
     magenta_score = np.mean((r + b - g) / 2.0)
-    
+
     # Normalize to 0-255 range
     return max(0.0, magenta_score)
 
@@ -104,6 +80,7 @@ def find_edges(video_file):
         if len(brightness_history) == ROLLING_AVERAGE_FRAMES:
             # Calculate running average of past frames
             avg_brightness = np.mean(brightness_history)
+            # print(f"{frame_number=} {brightness=} {avg_brightness=}")
             
             # Check for rising edge (threshold% above average)
             if brightness > avg_brightness * (1 + BRIGHTNESS_THRESHOLD_PERCENT):
@@ -194,7 +171,7 @@ def find_sequence(video_file, midframe_numbers):
     avg_magenta = np.mean(list(magenta_scores.values()))
     magenta_threshold = avg_magenta * MAGENTA_THRESHOLD_MULTIPLIER
     
-    print(f"\nMagenta analysis:")
+    print("\nMagenta analysis:")
     print(f"Average magenta score: {avg_magenta:.2f}")
     print(f"Dynamic threshold: {magenta_threshold:.2f}")
     
@@ -234,7 +211,7 @@ def find_sequence(video_file, midframe_numbers):
         
         # Check if end frame is also magenta
         if end_magenta in magenta_frames:
-            print(f"\nFound sequence!")
+            print("\nFound sequence!")
             print(f"Start magenta: frame {start_magenta} (index {start_idx})")
             print(f"End magenta: frame {end_magenta} (index {expected_end_idx})")
             print(f"Sequence length: {expected_end_idx - start_idx + 1} frames")
@@ -285,108 +262,87 @@ def extract_frames(video_file, frame_numbers, prefix="high"):
     print(f"\nExtracted {len(frame_numbers)} frames")
 
 
-def extract_subsequence_dark_frames(video_file, subsequence_info, low_midframes):
-    """Extract one dark frame per sub-sequence (before the first lit frame)."""
+def extract_sequence_dark_frame(video_file, sequence_info, low_midframes):
+    """Extract one dark frame for the sequence (before the first lit frame)."""
     import os
-    
-    if not subsequence_info:
-        print("No sub-sequence info for dark frame extraction")
+
+    if not sequence_info:
+        print("No sequence info for dark frame extraction")
         return
-        
-    print(f"\nExtracting dark frames for {len(subsequence_info)} sub-sequences...")
-    
+
+    # Unpack single sequence info (only one sequence now)
+    seq_idx, first_frame, extracted_frames = sequence_info[0]
+
+    print("\nExtracting dark frame for sequence...")
+
     # Get video filename without extension for prefix
     video_basename = os.path.splitext(os.path.basename(video_file))[0]
-    
+
     # Open video file
     cap = cv2.VideoCapture(video_file)
-    
+
     if not cap.isOpened():
         print(f"Error: Could not open video file {video_file}")
         return
-    
-    for sub_seq_idx, first_frame, extracted_frames in subsequence_info:
-        # Find the most recent dark frame before the first lit frame of this sub-sequence
-        previous_dark = None
-        for dark_frame in reversed(low_midframes):  # Search backwards
-            if dark_frame < first_frame:
-                previous_dark = dark_frame
-                break
-        
-        if previous_dark is not None:
-            print(f"Sub-sequence {sub_seq_idx}: first lit frame {first_frame}, previous dark frame {previous_dark}")
-            
-            # Seek to the dark frame
-            cap.set(cv2.CAP_PROP_POS_FRAMES, previous_dark)
-            ret, frame = cap.read()
-            
-            if ret:
-                # Generate output filename: prefix_subseq_idx_frame_dark.png
-                output_filename = f"{video_basename}_subseq_{sub_seq_idx:02d}_{previous_dark:04d}_dark.png"
-                cv2.imwrite(output_filename, frame)
-                print(f"Extracted dark frame {previous_dark} -> {output_filename}")
-            else:
-                print(f"Error: Could not extract dark frame {previous_dark}")
+
+    # Find the most recent dark frame before the first lit frame
+    previous_dark = None
+    for dark_frame in reversed(low_midframes):  # Search backwards
+        if dark_frame < first_frame:
+            previous_dark = dark_frame
+            break
+
+    if previous_dark is not None:
+        print(f"First lit frame {first_frame}, previous dark frame {previous_dark}")
+
+        # Seek to the dark frame
+        cap.set(cv2.CAP_PROP_POS_FRAMES, previous_dark)
+        ret, frame = cap.read()
+
+        if ret:
+            # Generate output filename
+            output_filename = f"{video_basename}_seq_{previous_dark:04d}_dark.png"
+            cv2.imwrite(output_filename, frame)
+            print(f"Extracted dark frame {previous_dark} -> {output_filename}")
         else:
-            print(f"Sub-sequence {sub_seq_idx}: no previous dark frame found for first lit frame {first_frame}")
-    
+            print(f"Error: Could not extract dark frame {previous_dark}")
+    else:
+        print(f"No previous dark frame found for first lit frame {first_frame}")
+
     cap.release()
 
 
 def process_subsequences(video_file, sequence_frames):
-    """Process sub-sequences: exclude magenta markers and divide into sub-sequences.
-    
+    """Process sequence: exclude magenta markers and extract data frames.
+
     Returns:
-        List of tuples: (sub_seq_idx, first_frame_number, extracted_frames)
+        List of tuples: (seq_idx, first_frame_number, extracted_frames)
     """
     if len(sequence_frames) < 3:  # At least start magenta + 1 frame + end magenta
-        print("Error: Sequence too short to process sub-sequences")
+        print("Error: Sequence too short to process")
         return []
-    
+
     # Remove magenta markers (first and last frames)
     core_sequence = sequence_frames[1:-1]
     print(f"\nCore sequence (excluding magentas): {len(core_sequence)} frames")
     print(f"Core frames: {core_sequence}")
-    
-    # Calculate sub-sequence length
-    sub_seq_length = SEQUENCE_LENGTH // SUB_SEQUENCES
-    print(f"Sub-sequence length: {sub_seq_length} frames each")
-    
+
     if len(core_sequence) != SEQUENCE_LENGTH:
         print(f"Error: Core sequence length ({len(core_sequence)}) doesn't match expected {SEQUENCE_LENGTH}")
         return []
-    
-    print(f"\nProcessing {SUB_SEQUENCES} sub-sequences:")
-    
-    subsequence_info = []
-    
-    for sub_seq_idx in range(SUB_SEQUENCES):
-        start_idx = sub_seq_idx * sub_seq_length
-        end_idx = start_idx + sub_seq_length
-        
-        # Get the sub-sequence frames
-        sub_sequence = core_sequence[start_idx:end_idx]
-        
-        # Remove the first frame (marker) from each sub-sequence
-        if len(sub_sequence) > 1:
-            sub_sequence_data = sub_sequence[1 if SKIP_FIRST_FRAME_IN_SEQUENCE else 0:]  # Skip first frame (marker)
-            first_frame = sub_sequence_data[0]  # First lit frame of this sub-sequence
-            
-            print(f"Sub-sequence {sub_seq_idx + 1}: {len(sub_sequence_data)} frames")
-            print(f"  Original: {sub_sequence}")
-            print(f"  Data frames (excluding marker): {sub_sequence_data}")
-            print(f"  First lit frame: {first_frame}")
-            
-            # Extract the sub-sequence data frames
-            prefix = f"subseq_{sub_seq_idx + 1:02d}"
-            extract_frames(video_file, sub_sequence_data, prefix)
-            
-            # Store info for dark frame extraction
-            subsequence_info.append((sub_seq_idx + 1, first_frame, sub_sequence_data))
-        else:
-            print(f"Sub-sequence {sub_seq_idx + 1}: Not enough frames")
-    
-    return subsequence_info
+
+    # Extract all data frames
+    first_frame = core_sequence[0]
+    print(f"\nProcessing sequence: {len(core_sequence)} frames")
+    print(f"  Frames: {core_sequence}")
+    print(f"  First frame: {first_frame}")
+
+    # Extract the sequence data frames
+    prefix = "seq"
+    extract_frames(video_file, core_sequence, prefix)
+
+    # Return info for dark frame extraction: (seq_idx=1, first_frame, all_frames)
+    return [(1, first_frame, core_sequence)]
 
 
 def main():
@@ -434,14 +390,14 @@ def main():
     print(f"\nMagenta sequence found: {len(sequence_frames)} frames")
     print(f"Sequence frames: {sequence_frames}")
     
-    # Process sub-sequences and get extracted frame numbers
+    # Process sequence and get extracted frame numbers
     extracted_frames = process_subsequences(video_file, sequence_frames)
-    
-    # Extract dark frames ONLY for the frames that were extracted in sub-sequences
+
+    # Extract dark frame for the sequence
     if extracted_frames:
-        extract_subsequence_dark_frames(video_file, extracted_frames, low_midframes)
+        extract_sequence_dark_frame(video_file, extracted_frames, low_midframes)
     else:
-        print("\nNo sub-sequence frames extracted, skipping dark frame extraction")
+        print("\nNo sequence frames extracted, skipping dark frame extraction")
 
 
 if __name__ == "__main__":
