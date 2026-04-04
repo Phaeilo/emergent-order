@@ -4,68 +4,17 @@
 use embassy_executor::Spawner;
 use embassy_time::{Timer};
 use esp_backtrace as _;
-use esp_hal::{clock::CpuClock, rmt::Rmt, time::Rate};
+use esp_hal::{clock::CpuClock, rmt::Rmt, time::Rate, time::Instant, time::Duration};
 use esp_hal_smartled::{RmtSmartLeds, buffer_size, color_order, Ws2812Timing};
-use smart_leds::{brightness, gamma, hsv::Hsv, colors::BLACK, hsv::hsv2rgb, RGB8, SmartLedsWriteAsync};
+use smart_leds::{brightness, gamma, colors::BLACK, RGB8, SmartLedsWriteAsync};
 use esp_hal::timer::timg::TimerGroup;
-use log::info;
-use libm::{sinf, cosf, floorf};
+use log::{info};
+use minikube::vec::Vec3;
 
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
 esp_bootloader_esp_idf::esp_app_desc!();
 
-
-#[derive(Clone)]
-struct Vec3 {
-    x: f32,
-    y: f32,
-    z: f32
-}
-
-impl Vec3 {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self {x, y, z}
-    }
-
-    pub fn sub(self, s: f32) -> Self {
-        Self {x: self.x-s, y: self.y-s, z: self.z-s}
-    }
-    pub fn scl(self, s: f32) -> Self {
-        Self {x: self.x*s, y: self.y*s, z: self.z*s}
-    }
-
-    pub fn rotate_x(self, r: f32) -> Self {
-        Self {
-            x: self.x, 
-            y: self.y * cosf(r) - self.z * sinf(r),
-            z: self.y * sinf(r) + self.z * cosf(r),
-        }
-    }
-
-    pub fn rotate_z(self, r: f32) -> Self {
-        Self {
-            x: self.x * cosf(r) - self.y * sinf(r),
-            y: self.x * sinf(r) + self.y * cosf(r),
-            z: self.z,
-        }
-    }
-    pub fn to_rgb8(self) -> RGB8 {
-        RGB8::new(
-            ((255.0 * self.x) as u8).clamp(0, 0xff),
-            ((255.0 * self.y) as u8).clamp(0, 0xff),
-            ((255.0 * self.z) as u8).clamp(0, 0xff),
-        )
-    }
-
-}
-
-
-// impl<f32> Sub for Vec3 {
-//     fn sub(self, o: f32) -> Self {
-//         Self { self.x - o, self.y - o, self.z - o }
-//     }
-// }
 
 
 
@@ -87,20 +36,13 @@ async fn main(spawner: Spawner) -> ! {
         esp_hal::interrupt::software::SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
     esp_rtos::start(timg0.timer0, sw_interrupt.software_interrupt0);
 
-
     let mut led = {
         let frequency = Rate::from_mhz(80);
         let rmt = Rmt::new(peripherals.RMT, frequency).expect("Failed to initialize RMT0").into_async();
         RmtSmartLeds::<{ buffer_size::<RGB8>(NUM_LEDS) }, _, RGB8, color_order::Grb, Ws2812Timing>::new(rmt.channel0, peripherals.GPIO20).unwrap()
     };
-    // let level = 10;
-    // let mut color = Hsv {
-    //     hue: 0,
-    //     sat: 255,
-    //     val: 255,
-    // };
-    // let mut data = [BLACK; NUM_LEDS];
-    // let mut hue = 0;
+
+    let t0 = Instant::now();
 
     spawner.must_spawn(background_print());
 
@@ -108,8 +50,8 @@ async fn main(spawner: Spawner) -> ! {
 
     let mut colors = [BLACK; NUM_LEDS];
 
-    let mut t = 0.0;
     loop {
+        let t = t0.elapsed();
         for i in 0..NUM_LEDS {
             colors[i] = match &LED_POSITIONS[i] {
                 Some(p) => get_color(p.clone(), t, i).to_rgb8(),
@@ -117,84 +59,65 @@ async fn main(spawner: Spawner) -> ! {
             }
         }
 
-        // color.hue = hue; 
-        // for i in SKIP_LEDS..NUM_LEDS {
-        //     data[i] = colors;
-        //     // data[i] = hsv2rgb(color);
-        // }
-        // let res = led.write(brightness(gamma(data.iter().cloned()), level)).await;
-        // TODO: gamma
-        let res = led.write(colors).await;
+        let res = led.write(brightness(gamma(colors.into_iter()), 55)).await;
         res.unwrap();
-        Timer::after_millis(20).await;
-        t += 0.020; // TODO: oh dear!
-        // hue = (hue + 1) & 0xff;
+
+        // Wait until next frame
+        let target_fps = 60;
+        let target_frametime = 1.0 / target_fps as f32;
+        let frame_took = (t0.elapsed() - t).as_micros() as f32 / 1000000.0;
+        let spare_time = target_frametime - frame_took;
+        if spare_time > 0.0 {
+            Timer::after_micros((spare_time * 1000000.0) as u64).await;
+        }
     }
 
 }
 
-
-fn my_hsv_to_rgb(h: f32, s: f32, v: f32) -> Vec3 {
-    let h_ = if h > 1.0 || h < 0.0 { h - floorf(h) } else { h };
-
-    let c = v * s;
-    let x = c * (1.0 - (((h_ * 6.0) % 2.0) - 1.0).abs());
-    let m = v - c;
-
-    let h6 = h_ * 6.0;
-
-    let (r, g, b) = if h6 < 1.0 {
-        (c, x, 0.0)
-    } else if h6 < 2.0 {
-        (x, c, 0.0)
-    } else if h6 < 3.0 {
-        (0.0, c, x)
-    } else if h6 < 4.0 {
-        (0.0, x, c)
-    } else if h6 < 5.0 {
-        (x, 0.0, c)
-    } else {
-        (c, 0.0, x)
-    };
-
-    Vec3::new(r + m, g + m, b + m)
-}
-
-fn get_color(pos: Vec3, t: f32, led_id: usize) -> Vec3 {
-    // Center coordinates to [-0.5, 0.5]
-    let mut _pos = pos.sub(0.5);
-
-    // Calculate rotation angles
-    let rot_speed = Vec3::new(1.3, 0.0, -2.9);
-    let rot = rot_speed.scl(t);
-
-    // Apply rotation around X/Z
-    _pos = _pos.rotate_x(rot.x);
-    _pos = _pos.rotate_z(rot.z);
-
-    // SDF plane
-    let sdf_value = _pos.y;
-
-    let edge_smoothness = 0.15;
-
-    // Turn SDF into brightness
-    let sdf_brightness = if sdf_value < -edge_smoothness {
+fn smooth_sdf(value: f32, smoothness: f32) -> f32 {
+    if value < -smoothness {
         1.0
-    } else if sdf_value > edge_smoothness {
+    } else if value > smoothness {
         0.0
     } else {
         // Smoothstep
-        let v = (sdf_value + edge_smoothness) / (edge_smoothness * 2.0);
-        let smooth = v * v * (3.0 - 2.0 * v);
-        1.0 - smooth
-    };
+        let edge0 = -smoothness;
+        let edge1 = smoothness;
+        let t = ((value - edge0) / (edge1 - edge0)).clamp(0.0, 1.0);
+        let t = t * t * (3.0 - 2.0 * t);
+        1.0 - t
+    }
+}
+
+fn get_color(pos: Vec3, t: Duration, _led_id: usize) -> Vec3 {
+    let t = t.as_micros() as f32 / 1000000.0;
+
+    // Center coordinates to [-0.5, 0.5]
+    let mut pos = pos - 0.5;
+
+    // Calculate rotation angles
+    let rot_speed = Vec3::new(0.9, 0.0, -1.9);
+    let rot = rot_speed * t;
+
+    // Apply rotation
+    pos = pos.rotate_x(rot.x);
+    // _pos = _pos.rotate_y(rot.y);
+    pos = pos.rotate_z(rot.z);
+
+    // SDF plane
+    let sdf_value = pos.y;
+
+    // Turn SDF into brightness
+    let sdf_brightness = smooth_sdf(sdf_value, 0.25);
 
     // Determine current color
     let hue_cycle_duration = 180.0;
+    let saturation = 0.95;
+    let brightness = 1.0;
     let hue = (t / hue_cycle_duration) % 1.0;
-    let color = my_hsv_to_rgb(hue, 0.95, 1.0).scl(sdf_brightness);
+    let color = Vec3::new(hue, saturation, brightness).hsv_to_rgb();
 
-    color
+    color * sdf_brightness
 }
 
 
@@ -205,6 +128,6 @@ async fn background_print() {
     loop {
         info!("Hello from Rust {}!", x);
         x += 1;
-        Timer::after_secs(1).await;
+        Timer::after_millis(10_000).await;
     }
 }
