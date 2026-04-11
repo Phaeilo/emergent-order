@@ -9,7 +9,7 @@ use esp_hal_smartled::{RmtSmartLeds, buffer_size, color_order, Ws2812Timing};
 use smart_leds::{brightness, gamma, colors::BLACK, RGB8, SmartLedsWriteAsync};
 use esp_hal::timer::timg::TimerGroup;
 use log::{info};
-use minikube::vec::Vec3;
+use minikube::vec::{Vec3, fast_sin};
 
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
@@ -17,9 +17,26 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 
 
+trait DurationFloats {
+    fn as_secs_f32(&self) -> f32;
+}
 
-const NUM_LEDS: usize = 77;
-const LED_POSITIONS: [Option<Vec3>; NUM_LEDS] = [None, None, None, None, Some(Vec3{x:0.701594, y:0.162842, z:0.00199}), Some(Vec3{x:0.573369, y:0.125924, z:-0.608135}), Some(Vec3{x:0.162958, y:0.095177, z:-0.931908}), Some(Vec3{x:-0.383797, y:-0.224107, z:-0.595791}), Some(Vec3{x:-0.735397, y:-0.394604, z:-0.226268}), Some(Vec3{x:-0.225841, y:0.066345, z:-0.032082}), Some(Vec3{x:0.279031, y:0.494067, z:0.201981}), Some(Vec3{x:0.607424, y:0.510916, z:0.297643}), Some(Vec3{x:0.585738, y:-0.154317, z:0.514955}), Some(Vec3{x:0.39736, y:-0.541651, z:0.314982}), Some(Vec3{x:0.095858, y:-0.671398, z:-0.29687}), Some(Vec3{x:-0.125699, y:-0.419957, z:-0.698208}), Some(Vec3{x:-0.429694, y:0.219521, z:-0.687035}), Some(Vec3{x:-0.402353, y:0.52043, z:-0.499234}), Some(Vec3{x:0.151748, y:0.24159, z:-0.144122}), Some(Vec3{x:0.681048, y:-0.046613, z:0.217843}), Some(Vec3{x:0.580419, y:0.112459, z:0.484014}), Some(Vec3{x:0.079127, y:0.605382, z:0.558403}), Some(Vec3{x:-0.119707, y:0.512799, z:0.350068}), Some(Vec3{x:-0.03269, y:0.02764, z:-0.156668}), Some(Vec3{x:0.084506, y:-0.463937, z:-0.63751}), Some(Vec3{x:0.559482, y:-0.335534, z:-0.625719}), Some(Vec3{x:0.619876, y:0.173384, z:-0.471609}), Some(Vec3{x:0.24139, y:0.708706, z:-0.234359}), Some(Vec3{x:-0.044126, y:0.789245, z:-0.039766}), Some(Vec3{x:-0.030918, y:0.086168, z:0.065242}), Some(Vec3{x:-0.077403, y:-0.61019, z:0.101955}), Some(Vec3{x:-0.122761, y:-0.635408, z:0.249096}), Some(Vec3{x:-0.495243, y:-0.163948, z:0.619135}), Some(Vec3{x:-0.576176, y:0.242332, z:0.738622}), Some(Vec3{x:-0.025048, y:0.105137, z:0.30093}), Some(Vec3{x:0.570385, y:0.011587, z:-0.076301}), Some(Vec3{x:0.718821, y:-0.074792, z:-0.307437}), Some(Vec3{x:0.237526, y:-0.570655, z:-0.168997}), Some(Vec3{x:-0.158358, y:-0.899747, z:0.033708}), Some(Vec3{x:-0.163057, y:-0.510215, z:0.63044}), Some(Vec3{x:-0.255891, y:-0.184918, z:0.600694}), Some(Vec3{x:-0.653463, y:0.059591, z:0.057356}), Some(Vec3{x:-0.911331, y:0.243537, z:-0.497664}), Some(Vec3{x:-0.464731, y:0.566163, z:-0.091658}), Some(Vec3{x:-0.051347, y:0.906021, z:0.375217}), Some(Vec3{x:0.13519, y:0.451167, z:0.506491}), Some(Vec3{x:0.099964, y:-0.247873, z:0.563549}), Some(Vec3{x:0.215486, y:-0.761613, z:0.516384}), Some(Vec3{x:0.17185, y:-0.289268, z:0.000643}), Some(Vec3{x:0.107561, y:0.201042, z:-0.522464}), Some(Vec3{x:-0.065706, y:0.492079, z:-0.820565}), Some(Vec3{x:-0.240893, y:0.491775, z:-0.122317}), Some(Vec3{x:-0.355955, y:0.55119, z:0.578799}), Some(Vec3{x:-0.401074, y:0.175255, z:0.478134}), Some(Vec3{x:-0.527113, y:-0.333237, z:0.008896}), Some(Vec3{x:-0.497761, y:-0.595474, z:-0.389565}), Some(Vec3{x:-0.0136, y:-0.13361, z:-0.14339}), Some(Vec3{x:0.474087, y:0.318862, z:0.071}), Some(Vec3{x:0.577424, y:0.416489, z:0.3739}), Some(Vec3{x:0.079592, y:0.053257, z:0.735356}), Some(Vec3{x:-0.329579, y:-0.31227, z:0.701372}), Some(Vec3{x:-0.429589, y:-0.613049, z:0.062031}), Some(Vec3{x:-0.318714, y:-0.782599, z:-0.487799}), Some(Vec3{x:-0.086761, y:-0.501268, z:-0.281413}), Some(Vec3{x:-0.153901, y:0.010246, z:0.192456}), Some(Vec3{x:-0.21744, y:0.542304, z:0.663644}), Some(Vec3{x:-0.201737, y:0.84501, z:0.164011}), Some(Vec3{x:0.067875, y:0.8589, z:-0.329112}), Some(Vec3{x:0.570886, y:0.375813, z:-0.239793}), Some(Vec3{x:0.882187, y:-0.081695, z:-0.130359}), Some(Vec3{x:0.431371, y:-0.516118, z:0.214747}), Some(Vec3{x:-0.059563, y:-0.745354, z:0.423425}), Some(Vec3{x:-0.6153, y:-0.309674, z:0.307401}), Some(Vec3{x:-0.920448, y:0.120961, z:0.133791}), Some(Vec3{x:-0.369985, y:-0.077161, z:-0.263142}), Some(Vec3{x:0.19249, y:-0.278078, z:-0.653043}), Some(Vec3{x:0.356528, y:-0.010983, z:-1.0})];
+impl DurationFloats for Duration {
+    fn as_secs_f32(&self) -> f32 {
+        self.as_micros() as f32 / 1000000.0
+    }
+}
+
+trait TimerFloats {
+    fn after_secs_f32(secs: f32) -> Self;
+}
+
+impl TimerFloats for Timer {
+    fn after_secs_f32(secs: f32) -> Self {
+        Timer::after_micros((secs * 1000000.0) as u64)
+    }
+}
+
 
 
 #[esp_rtos::main]
@@ -36,6 +53,61 @@ async fn main(spawner: Spawner) -> ! {
         esp_hal::interrupt::software::SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
     esp_rtos::start(timg0.timer0, sw_interrupt.software_interrupt0);
 
+
+    const NUM_LEDS: usize = 128;
+    const LED_OFFSET: usize = 4;
+    let mut led_coords: [Option<Vec3>; NUM_LEDS] = [None; NUM_LEDS];
+
+    let mut pos_max: Option<Vec3> = None;
+    let mut pos_min: Option<Vec3> = None;
+
+    let pos_txt = include_str!("../led_positions_3d.txt");
+    for line in pos_txt.lines() {
+        if line.starts_with("LED_") {
+            let mut split = line.split_whitespace();
+            let led = split.next().unwrap();
+            let led = led.split_once("_").unwrap().1;
+            let led = led.parse::<usize>().unwrap();
+            let led = led + LED_OFFSET;
+            let x = split.next().unwrap();
+            let y = split.next().unwrap();
+            let z = split.next().unwrap();
+            let x = x.parse::<f32>().unwrap();
+            let y = y.parse::<f32>().unwrap();
+            let z = z.parse::<f32>().unwrap();
+            let coord = Vec3::new(x, y, z);
+            info!("LED id={} pos x={} y={} z={}", led, coord.x, coord.y, coord.z);
+            led_coords[led] = Some(coord);
+
+            pos_max = Some(match pos_max {
+                None => coord,
+                Some(v) => v.max(coord)
+            });
+
+            pos_min = Some(match pos_min {
+                None => coord,
+                Some(v) => v.min(coord)
+            });
+        }
+    }
+
+    let pos_max = pos_max.unwrap();
+    let pos_min = pos_min.unwrap();
+    let pos_range = pos_max - pos_min;
+
+    for i in 0..NUM_LEDS {
+        let p = led_coords[i];
+        if p.is_none() {
+            continue;
+        }
+        let mut p = p.unwrap();
+        p.x = if pos_range.x > 0.0 { (p.x - pos_min.x) / pos_range.x } else { 0.5 };
+        p.y = if pos_range.y > 0.0 { (p.y - pos_min.y) / pos_range.y } else { 0.5 };
+        p.z = if pos_range.z > 0.0 { (p.z - pos_min.z) / pos_range.z } else { 0.5 };
+        led_coords[i] = Some(p);
+    }
+        
+        
     let mut led = {
         let frequency = Rate::from_mhz(80);
         let rmt = Rmt::new(peripherals.RMT, frequency).expect("Failed to initialize RMT0").into_async();
@@ -49,26 +121,37 @@ async fn main(spawner: Spawner) -> ! {
     info!("Entering main loop!");
 
     let mut colors = [BLACK; NUM_LEDS];
+    let mut frame_counter = 0;
 
     loop {
         let t = t0.elapsed();
+
         for i in 0..NUM_LEDS {
-            colors[i] = match &LED_POSITIONS[i] {
-                Some(p) => get_color(p.clone(), t, i).to_rgb8(),
+            colors[i] = match &led_coords[i] {
+                Some(p) => get_color_plane(p.clone(), t, i).to_rgb8(),
                 None => BLACK
             }
         }
+        let t1 = t0.elapsed();
 
-        let res = led.write(brightness(gamma(colors.into_iter()), 55)).await;
+        let res = led.write(gamma(colors.into_iter())).await;
+        // let res = led.write(colors.into_iter()).await;
         res.unwrap();
 
+        frame_counter += 1;
+
         // Wait until next frame
-        let target_fps = 60;
+        let target_fps = 50;
         let target_frametime = 1.0 / target_fps as f32;
-        let frame_took = (t0.elapsed() - t).as_micros() as f32 / 1000000.0;
+        let frame_took = (t0.elapsed() - t).as_secs_f32();
+        let compute_took = (t1 - t).as_secs_f32();
+        let send_took = (t0.elapsed() - t1).as_secs_f32();
         let spare_time = target_frametime - frame_took;
+        // if frame_counter % 100 == 0 {
+        //     info!("frame={} took={}ms compute_took={}ms send_took={}ms spare={}ms", frame_counter, frame_took*1000.0, compute_took*1000.0, send_took*1000.0, spare_time*1000.0);
+        // }
         if spare_time > 0.0 {
-            Timer::after_micros((spare_time * 1000000.0) as u64).await;
+            Timer::after_secs_f32(spare_time).await;
         }
     }
 
@@ -89,15 +172,15 @@ fn smooth_sdf(value: f32, smoothness: f32) -> f32 {
     }
 }
 
-fn get_color(pos: Vec3, t: Duration, _led_id: usize) -> Vec3 {
-    let t = t.as_micros() as f32 / 1000000.0;
 
+fn get_color_plane(pos: Vec3, t: Duration, _led_id: usize) -> Vec3 {
     // Center coordinates to [-0.5, 0.5]
     let mut pos = pos - 0.5;
+    let opos = pos;
 
     // Calculate rotation angles
-    let rot_speed = Vec3::new(0.9, 0.0, -1.9);
-    let rot = rot_speed * t;
+    let rot_speed = Vec3::new(0.7, 0.0, -1.9);
+    let rot = rot_speed * t.as_secs_f32();
 
     // Apply rotation
     pos = pos.rotate_x(rot.x);
@@ -108,18 +191,197 @@ fn get_color(pos: Vec3, t: Duration, _led_id: usize) -> Vec3 {
     let sdf_value = pos.y;
 
     // Turn SDF into brightness
-    let sdf_brightness = smooth_sdf(sdf_value, 0.25);
+    let sdf_brightness = smooth_sdf(sdf_value, 0.15);
 
     // Determine current color
     let hue_cycle_duration = 180.0;
     let saturation = 0.95;
-    let brightness = 1.0;
-    let hue = (t / hue_cycle_duration) % 1.0;
+    let brightness = 0.75;
+    let hue = t.as_secs_f32() / hue_cycle_duration;
+    let hue = hue - (0.2 * opos.x); // multicolor
     let color = Vec3::new(hue, saturation, brightness).hsv_to_rgb();
 
     color * sdf_brightness
 }
 
+fn get_color_expanding(pos: Vec3, t: Duration, _led_id: usize) -> Vec3 {
+    // Center coordinates to [-0.5, 0.5]
+    let mut pos = pos - 0.5;
+
+    let t_ = libm::fmodf(t.as_secs_f32(), 5.0) / 5.0;
+    // SDF sphere
+    let sphere_size = t_;
+    let sdf_value = pos.len() - sphere_size * 1.2;
+
+    // Turn SDF into brightness
+    let b = (t_ - 0.2).max(0.0);
+    let b = (b * b) * 6.5;
+    let b = 1.0 - b;
+    let sdf_brightness = smooth_sdf(sdf_value, 0.15) * b;
+
+    // Determine current color
+    let hue_cycle_duration = 10.0;
+    let saturation = 0.95;
+    let brightness = 0.35;
+    //let hue = t.as_secs_f32() / hue_cycle_duration;
+    let hue = t_ * 0.5;
+    let color = Vec3::new(hue, saturation, brightness).hsv_to_rgb();
+
+    color * sdf_brightness
+}
+
+fn get_color_wobble(pos: Vec3, t: Duration, _led_id: usize) -> Vec3 {
+    // Center coordinates to [-0.5, 0.5]
+    let pos = pos - 0.5;
+    let opos = pos;
+
+    // Wobble
+    let wobble_speed = 1.6;
+    let wobble_scale = 0.1;
+    let anim_time = t.as_secs_f32() * wobble_speed;
+    let pos = Vec3::new(
+        pos.x + wobble_scale * (fast_sin(pos.x * 10.0 + anim_time * 2.0)
+                              + fast_sin(pos.z *  7.3 + anim_time * 1.3)),
+        pos.y + wobble_scale * (fast_sin(pos.y *  8.5 + anim_time * 1.7)
+                              + fast_sin(pos.x *  6.1 + anim_time * 2.3)),
+        pos.z + wobble_scale * (fast_sin(pos.x *  9.2 + anim_time * 1.5)
+                              + fast_sin(pos.y *  5.7 + anim_time * 1.9)),
+    );
+
+    // Sphere SDF
+    let radius = 0.38;
+    let sdf_value = pos.len() - radius;
+    let sdf_brightness = smooth_sdf(sdf_value, 0.15);
+
+    // Determine current color
+    let hue_cycle_duration = 180.0;
+    let saturation = 0.95;
+    let brightness = 0.4;
+    let hue = t.as_secs_f32() / hue_cycle_duration;
+    let hue = 0.0;
+    let hue = hue - (0.2 * opos.x); // multicolor
+    let color = Vec3::new(hue, saturation, brightness).hsv_to_rgb();
+
+    color * sdf_brightness
+}
+
+fn get_color_slices(pos: Vec3, t: Duration, _led_id: usize) -> Vec3 {
+    // Center coordinates to [-0.5, 0.5]
+    let mut pos = pos - 0.5;
+
+    // Calculate rotation angles
+    let timescale = 5.0;
+    let speed = 1.0;
+    let sub_t = libm::fmodf(t.as_secs_f32(), timescale) / timescale;
+    let offset = (sub_t * speed) - 0.5;
+    let offset = offset * 1.45;
+
+    let sub_i = ((t.as_secs_f32() / timescale) as usize) % 6;
+
+    let h = ((t.as_secs_f32() / timescale) as usize);
+    let h = h * 2654435761 + 1337;
+    let h = ((h >> 16) ^ h) * 0x45d9f3b;
+    let h = ((h >> 16) ^ h) * 0x45d9f3b;
+    let h = (h >> 16) ^ h;
+
+    // SDF slice
+    let slice_width = 0.4;
+    let axis = match sub_i {
+        0 => pos.x,
+        1 => pos.y,
+        2 => pos.z,
+        3 => -pos.x,
+        4 => -pos.y,
+        5 => -pos.z,
+        _ => 0.0,
+    };
+    let sdf_value = (axis + offset).abs() - slice_width * 0.5;
+
+    // Turn SDF into brightness
+    let sdf_brightness = smooth_sdf(sdf_value, 0.1);
+
+    // Determine current color
+    let saturation = 0.66;
+    let brightness = 0.66;
+    // let hues: [f32; 3] = [0.0, 0.25, 0.7];
+    // let hue = hues[sub_i];
+    let hue = 1.0 / 6.0 * (h % 6) as f32;
+    let color = Vec3::new(hue, saturation, brightness).hsv_to_rgb();
+
+    color * sdf_brightness
+}
+
+
+fn get_color_fireworks(pos: Vec3, t: Duration, led_id: usize) -> Vec3 {
+    // Center coordinates to [-0.5, 0.5]
+    let pos = pos - 0.5;
+
+    let lifetime = 2.5;
+    let sub_t = libm::fmodf(t.as_secs_f32(), lifetime) / lifetime; // [0, 1]
+    let firework_id = (t.as_secs_f32() / lifetime) as usize;
+
+    // Hash firework_id for random center and color
+    let h = firework_id.wrapping_mul(2654435761).wrapping_add(1337);
+    let h = ((h >> 16) ^ h).wrapping_mul(0x45d9f3b);
+    let h = ((h >> 16) ^ h).wrapping_mul(0x45d9f3b);
+    let h = (h >> 16) ^ h;
+
+    let center = Vec3::new(
+        (h & 0xff) as f32 / 255.0 - 0.5,
+        ((h >> 8) & 0xff) as f32 / 255.0 - 0.5,
+        ((h >> 16) & 0xff) as f32 / 255.0 - 0.5,
+    );
+    let hue = ((h >> 24) & 0xff) as f32 / 255.0;
+
+    // Sphere occupies [0, 0.9]; remap so fade completes by then
+    let sphere_t = (sub_t / 0.7).min(1.0);
+    let diff = pos - center;
+    let dist = libm::sqrtf(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
+    let radius = sphere_t * 1.15;
+    let sdf_value = dist - radius;
+    let fade = 1.0 - sphere_t * sphere_t * sphere_t;
+    let sdf_brightness = smooth_sdf(sdf_value, 0.05) * fade;
+    let sphere = Vec3::new(hue, 0.85, 1.0).hsv_to_rgb() * sdf_brightness;
+
+    // Sparkle occupies [0.8, 1.0]: bell curve
+    let sparkle_t = ((sub_t - 0.6) / 0.4).clamp(0.0, 1.0);
+    let ramp = (sparkle_t * 6.0).min(1.0); // reaches peak fast
+    let sparkle_env = ramp * (1.0 - sparkle_t) * (1.0 - sparkle_t);
+    // Per-LED random phase and frequency — flickers across all LEDs
+    let lh = led_id.wrapping_mul(2654435761) ^ h;
+    let lh = ((lh >> 16) ^ lh).wrapping_mul(0x45d9f3b);
+    let lh = (lh >> 16) ^ lh;
+    let phase = (lh & 0xff) as f32 / 255.0 * (2.0 * 3.14159265);
+    let freq = 8.0 + ((lh >> 8) & 0xff) as f32 / 255.0 * 16.0; // 8–24 Hz per LED
+    let flicker = libm::sinf(t.as_secs_f32() * freq + phase) * 0.5 + 0.5;
+    let sparkle_color = Vec3::new(1.0, 1.0, 1.0) * (flicker * sparkle_env);
+
+    sphere + sparkle_color
+}
+
+fn get_color_linear(pos: Vec3, t: Duration, led_id: usize) -> Vec3 {
+
+    let h = led_id.wrapping_mul(2654435761).wrapping_add(1337);
+    let h = ((h >> 16) ^ h).wrapping_mul(0x45d9f3b);
+    let h = ((h >> 16) ^ h).wrapping_mul(0x45d9f3b);
+    let h = (h >> 16) ^ h;
+
+    let phase = (h & 0xff) as f32 / 255.0 * (2.0 * 3.14159265);
+    let freq = ((h >> 8) & 0xff) as f32 / 255.0 * 8.0 + 1.0;
+
+    //let phase = led_id as f32 * 1.0;
+    let bri = fast_sin(t.as_secs_f32() * freq + phase) * 0.5 + 0.5;
+
+    // Determine current color
+    let hue_cycle_duration = 180.0;
+    let saturation = 0.95;
+    let brightness = 0.8;
+    let hue = t.as_secs_f32() / hue_cycle_duration;
+    let hue = hue - (0.2 * pos.x); // multicolor
+    let color = Vec3::new(hue, saturation, brightness).hsv_to_rgb();
+
+    color * bri * 0.15
+}
 
 
 #[embassy_executor::task]
@@ -128,6 +390,6 @@ async fn background_print() {
     loop {
         info!("Hello from Rust {}!", x);
         x += 1;
-        Timer::after_millis(10_000).await;
+        Timer::after_millis(25_000).await;
     }
 }
