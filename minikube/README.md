@@ -64,3 +64,21 @@ The minikube is a fully self-contained LED cube made entirely from 3D printed pa
 2. **Install firmware and wire electronics:** Follow the instructions in [firmware/README.md](firmware/README.md) to flash MicroPython, wire the electronics, and upload the firmware.
 
 3. **Calibrate LED positions:** Use the calibration tools in `../calibration/` to map the 3D coordinates of each LED for accurate volumetric rendering.
+
+## Variants
+
+### Dodecahedron
+
+A dodecahedral variant uses the same **stick** parts as the cube, combined with a
+different corner piece. It needs no base.
+
+![Assembled dodecahedron variant](minidode.jpg)
+
+- **Sticks:** 30× (same part as the cube)
+- **Corners:** 20× dodecahedron corner pieces ([mechanical/corner_dodecahedron.3mf](mechanical/corner_dodecahedron.3mf))
+- **Base:** Not needed
+- **LEDs:** Pictured with 2 strings of 200 LEDs each (400 LEDs total)
+- **M3 screws:** 60× (2 per stick)
+
+Assembly follows the same approach as the cube: connect sticks to corners with M3
+screws to form the frame, then thread the LED strings through the volume.

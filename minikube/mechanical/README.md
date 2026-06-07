@@ -16,6 +16,12 @@ These are the mechanical parts for the "minikube" LED cube. All parts are fully 
 - **Quantity:** 1
 - **Onshape CAD:** [View model](https://cad.onshape.com/documents/35b631ccccc90ff975992415/w/c20a5f2e54700722651818f8/e/fb26ce946a9d956585137d0c?renderMode=0&uiState=6956ad4421e71e1eb8b651da)
 
+### Corner (Dodecahedron variant)
+- **Quantity:** 20
+- **File:** [corner_dodecahedron.3mf](corner_dodecahedron.3mf)
+- **Onshape CAD:** [View model](https://cad.onshape.com/documents/35b631ccccc90ff975992415/w/c20a5f2e54700722651818f8/e/26bb227b4a6fb8bb9e3b2848?renderMode=0&uiState=6a25b258951154c15aa61336)
+- Used for the dodecahedron variant together with 30× Stick parts & 60 M3 screws. No base needed.
+
 ## Hardware Required
 
 - **M3 screws:** 24× screws, approximately 8mm length

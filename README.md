@@ -42,7 +42,7 @@ This repository contains the following subdirectories:
 
 ### Prototypes
 
-- **`minikube/`** - Smaller ~20×20×20cm prototype cube with MicroPython firmware and mechanical designs for ESP32-C3. See [minikube/README.md](minikube/README.md) for details.
+- **`minikube/`** - Smaller ~20×20×20cm prototype cube with MicroPython firmware and mechanical designs for ESP32-C3. Also includes a dodecahedron variant that reuses the same stick parts. See [minikube/README.md](minikube/README.md) for details.
 
 ## Technical Specifications
 
